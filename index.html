@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>VOICE RIDER</title>
+<style>
+  :root {
+    --bg: #0a0c12; --bg2: #11151f;
+    --panel: #161b26; --panel2: #1b212e; --line: #2a3240;
+    --text: #e8edf5; --muted: #8893a6;
+    --red: #ff2d44; --red-soft: #ff6680; --gold: #ffc24d; --cyan: #36e0ff; --green: #43f5a0;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { -webkit-text-size-adjust: 100%; }
+  html, body { margin: 0; touch-action: manipulation; }
+  button, .chip, .lchip, .hbtn, .mini, .helmet-btn, label.opt, select, input { touch-action: manipulation; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    color: var(--text); line-height: 1.6; -webkit-font-smoothing: antialiased; min-height: 100vh;
+    background:
+      radial-gradient(900px 500px at 50% -10%, rgba(255,45,68,.10), transparent 60%),
+      radial-gradient(700px 600px at 110% 20%, rgba(54,224,255,.06), transparent 60%),
+      linear-gradient(180deg, var(--bg2), var(--bg));
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background: repeating-linear-gradient(180deg, rgba(255,255,255,.018) 0 1px, transparent 1px 3px);
+    mix-blend-mode: overlay;
+  }
+  .wrap { position: relative; z-index: 1; max-width: 860px; margin: 0 auto; padding: 22px 16px 60px; }
+
+  .topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+  .logo {
+    font-weight: 900; letter-spacing: 4px; font-size: 24px;
+    background: linear-gradient(90deg, var(--red), var(--gold));
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 18px rgba(255,45,68,.25);
+  }
+  .sys-status {
+    margin-left: auto; display: flex; align-items: center; gap: 8px;
+    font-size: 12px; font-weight: 800; letter-spacing: 1px; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; background: rgba(0,0,0,.25);
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: #4a5566; box-shadow: 0 0 0 3px rgba(74,85,102,.15); }
+  .dot.live { background: var(--red); box-shadow: 0 0 10px var(--red), 0 0 0 3px rgba(255,45,68,.2); animation: pulse 1.1s infinite; }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.35; } }
+
+  /* 캐릭터 선택 */
+  .selector { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:14px; }
+  .chip {
+    font:inherit; font-weight:800; font-size:13px; letter-spacing:.5px; cursor:pointer;
+    border:1px solid var(--line); background:var(--panel2); color:var(--muted);
+    padding:8px 14px; border-radius:999px; transition:all .15s;
+  }
+  .chip:hover { color:#fff; border-color:var(--gold); }
+  .chip.active { color:#fff; border-color:var(--red); background:rgba(255,45,68,.15); box-shadow:0 0 14px rgba(255,45,68,.3); }
+
+  /* 언어 선택 칩 */
+  .langsel { margin-top:-4px; margin-bottom:16px; }
+  .lchip {
+    font:inherit; font-weight:700; font-size:12px; cursor:pointer;
+    border:1px solid var(--line); background:var(--panel2); color:var(--muted);
+    padding:6px 14px; border-radius:999px; transition:all .15s;
+  }
+  .lchip:hover { color:#fff; border-color:var(--cyan); }
+  .lchip.active { color:#fff; border-color:var(--cyan); background:rgba(54,224,255,.14); box-shadow:0 0 12px rgba(54,224,255,.25); }
+
+  /* RECORDS 이력 */
+  .records-head { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid var(--line); font-size:12px; font-weight:900; letter-spacing:3px; color:var(--muted); }
+  .history { padding:6px; }
+  .empty { padding:22px; text-align:center; color:var(--muted); font-size:13px; }
+  .hrow { display:flex; align-items:center; gap:12px; padding:11px 12px; border:1px solid var(--line); border-radius:10px; margin:8px; background:rgba(0,0,0,.2); }
+  .hrow:hover { border-color:var(--gold); }
+  .hinfo { flex:1; min-width:0; }
+  .htitle { font-weight:800; font-size:14px; }
+  .hmeta { font-size:11px; color:var(--muted); margin-top:2px; letter-spacing:.5px; }
+  .hprev { font-size:12px; color:var(--muted); margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .hbtns { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:6px; flex-shrink:0; max-width:120px; }
+  .mini {
+    font:inherit; font-weight:800; font-size:12px; cursor:pointer;
+    border:1px solid var(--line); background:var(--panel2); color:var(--text);
+    padding:7px 10px; border-radius:8px; transition:all .15s;
+  }
+  .mini:hover { border-color:var(--gold); color:#fff; background:#222a38; }
+  .mini.danger:hover { border-color:var(--red); }
+
+  .panel {
+    background: linear-gradient(180deg, var(--panel), var(--panel2));
+    border: 1px solid var(--line); border-radius: 16px;
+    box-shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 20px 40px rgba(0,0,0,.45); position: relative;
+  }
+  .corner { position:absolute; width:14px; height:14px; border:2px solid var(--gold); opacity:.5; }
+  .corner.tl { top:8px; left:8px; border-right:0; border-bottom:0; }
+  .corner.tr { top:8px; right:8px; border-left:0; border-bottom:0; }
+  .corner.bl { bottom:8px; left:8px; border-right:0; border-top:0; }
+  .corner.br { bottom:8px; right:8px; border-left:0; border-top:0; }
+
+  .console { padding: 24px 18px 22px; text-align: center; margin-bottom: 16px; overflow: hidden; }
+
+  .helmet-btn {
+    background: none; border: none; cursor: pointer; padding: 0;
+    display: inline-flex; flex-direction: column; align-items: center; gap: 10px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .helmet-btn:disabled { opacity: .5; cursor: not-allowed; }
+  .helmet {
+    width: 176px; height: 194px; display: block;
+    filter: drop-shadow(0 8px 22px rgba(0,0,0,.6));
+    transition: transform .18s cubic-bezier(.2,.9,.3,1.4);
+  }
+  .helmet-btn:hover .helmet { transform: translateY(-2px) scale(1.03); }
+  .helmet-btn:active .helmet { transform: scale(.97); }
+
+  .helmet .eye { fill: var(--eyeDim, #3a0e16); transition: fill .25s; }
+  .helmet-btn.recording .eye { fill: var(--eyeOn, var(--red)); }
+  #visorGlow { transform-box: fill-box; transform-origin: center; transition: transform .04s linear; }
+  #visorGlow polygon { transition: opacity .04s linear; }
+  .helmet .crest { fill: #6b5a2a; stroke: #6b5a2a; transition: fill .25s, stroke .25s, filter .25s; }
+  .helmet-btn.recording .crest { fill: var(--gold); stroke: var(--gold); filter: drop-shadow(0 0 6px var(--gold)); }
+  .helmet .grille { transition: opacity .15s; }
+  .helmet-btn.recording .grille { animation: grille 1.1s ease-in-out infinite; }
+  @keyframes grille { 0%,100% { opacity:.5; } 50% { opacity:1; } }
+  .helmet .ring { opacity: 0; transform-box: fill-box; transform-origin: center; }
+  .helmet-btn.recording .ring { animation: ringPulse 1.5s ease-out infinite; }
+  @keyframes ringPulse { 0% { opacity:.55; transform: scale(.86);} 100% { opacity:0; transform: scale(1.18);} }
+
+  .henshin-label {
+    font-weight: 900; letter-spacing: 6px; font-size: 15px; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 8px; padding: 7px 22px; background: rgba(0,0,0,.3); transition: all .2s;
+    clip-path: polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+  }
+  .helmet-btn.recording .henshin-label {
+    color: #fff; border-color: var(--red); background: rgba(255,45,68,.18); box-shadow: 0 0 18px rgba(255,45,68,.35);
+  }
+
+  .console-row { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: center; margin-top: 20px; }
+  .gauge { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:800; color:var(--muted); }
+  .timer { font-variant-numeric: tabular-nums; font-weight: 900; font-size: 18px; color: var(--cyan); text-shadow: 0 0 12px rgba(54,224,255,.35); }
+  .meter-tip { color: var(--gold); font-size: 12px; font-weight: 700; }
+  label.opt { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--muted); cursor: pointer; letter-spacing: .5px; }
+  label.opt input { accent-color: var(--red); }
+
+  .log-head {
+    display:flex; align-items:center; gap:8px; padding: 12px 16px;
+    border-bottom: 1px solid var(--line); font-size: 12px; font-weight: 900; letter-spacing: 3px; color: var(--muted);
+  }
+  .log-head .bars { display:flex; gap:4px; }
+  .log-head .bars i { width:5px; height:12px; background: var(--line); border-radius:1px; display:block; transform-origin:center; }
+  .recording-on .log-head .bars i { background: var(--red); animation: eq 1s ease-in-out infinite; }
+  .log-head .bars i:nth-child(2){ animation-delay:.15s; } .log-head .bars i:nth-child(3){ animation-delay:.3s; }
+  @keyframes eq { 0%,100%{ transform: scaleY(.5);} 50%{ transform: scaleY(1.4);} }
+  .editor {
+    padding: 18px; min-height: 300px; font-size: 16px; outline: none;
+    white-space: pre-wrap; word-break: break-word; color: var(--text);
+  }
+  .editor:empty:before { content: attr(data-placeholder); color: var(--muted); }
+  .interim { color: var(--muted); font-style: italic; }
+  .line-time { color: var(--cyan); font-size: 12px; font-weight: 800; margin-right: 6px; user-select: none; }
+  .count { font-size: 11px; color: var(--muted); padding: 0 16px 12px; text-align: right; letter-spacing: 1px; }
+
+  .actions { display:flex; flex-wrap:wrap; gap: 10px; margin-top: 16px; }
+  .hbtn {
+    font: inherit; font-weight: 800; letter-spacing: .5px; cursor: pointer;
+    border: 1px solid var(--line); color: var(--text); background: var(--panel2);
+    padding: 11px 18px; display: inline-flex; align-items: center; gap: 8px;
+    clip-path: polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px); transition: all .15s;
+  }
+  .hbtn:hover { border-color: var(--gold); color: #fff; background: #222a38; }
+  .hbtn:active { transform: translateY(1px); }
+  .hbtn.danger:hover { border-color: var(--red); }
+  .warn { margin: 0 0 16px; padding: 12px 14px; border-radius: 10px; font-size: 13px; font-weight: 600; background: rgba(255,45,68,.1); color: var(--red-soft); border: 1px solid rgba(255,45,68,.35); }
+
+  .helmet-host { display: inline-block; line-height: 0; }
+
+  /* ===== 모바일 최적화 ===== */
+  @media (max-width: 560px) {
+    .wrap { padding: 16px 12px 48px; }
+    .logo { font-size: 19px; letter-spacing: 2px; }
+    .sys-status { padding: 5px 10px; font-size: 11px; }
+    .selector { gap: 6px; }
+    .chip { font-size: 12px; padding: 8px 12px; }
+    .lchip { font-size: 12px; padding: 8px 13px; }
+    .console { padding: 18px 12px 18px; }
+    .helmet { width: 142px; height: 156px; }
+    .henshin-label { letter-spacing: 4px; font-size: 14px; padding: 8px 18px; }
+    .console-row { gap: 10px; }
+    .editor { font-size: 16px; min-height: 240px; padding: 14px; }
+    .actions { gap: 8px; }
+    .hbtn { flex: 1; justify-content: center; padding: 12px 10px; }
+    .hrow { flex-direction: column; align-items: stretch; gap: 10px; }
+    .hbtns { max-width: none; justify-content: stretch; }
+    .hbtns .mini { flex: 1; padding: 10px 8px; font-size: 14px; }
+    .hprev { white-space: normal; }
+  }
+  /* 터치 기기에서 호버 잔상 제거 */
+  @media (hover: none) {
+    .helmet-btn:hover .helmet { transform: none; }
+    .chip:not(.active):hover, .lchip:not(.active):hover { background: var(--panel2); color: var(--muted); border-color: var(--line); }
+    .hbtn:hover, .mini:hover { background: var(--panel2); color: var(--text); border-color: var(--line); }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="logo">VOICE&nbsp;RIDER</div>
+    <div class="sys-status"><span id="dot" class="dot"></span><span id="statusText">STANDBY</span></div>
+  </div>
+
+  <div id="unsupported" class="warn" style="display:none;">
+    ⚠️ 이 브라우저는 음성 인식을 지원하지 않습니다. <b>크롬(Chrome)</b>에서 실행하십시오.
+  </div>
+
+  <div class="selector" id="selector">
+    <button class="chip" data-key="kaiju">👹 괴수</button>
+    <button class="chip" data-key="sentai">⭐ 전대</button>
+    <button class="chip" data-key="rider">🦗 라이더</button>
+    <button class="chip" data-key="robot">🤖 로봇</button>
+    <button class="chip" data-key="hero">🦸 히어로</button>
+  </div>
+
+  <div class="selector langsel" id="langSel">
+    <button class="lchip" data-lang="ko-KR">한국어</button>
+    <button class="lchip" data-lang="en-US">English</button>
+    <button class="lchip" data-lang="ja-JP">日本語</button>
+    <button class="lchip" data-lang="zh-CN">中文</button>
+  </div>
+
+  <div class="panel console" id="console">
+    <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
+
+    <button id="recBtn" class="helmet-btn" title="변신 / 해제 (녹음 시작·정지)" style="--eyeOn:#ff2d44;--eyeDim:#3a0e16">
+      <span id="helmetHost" class="helmet-host">
+        <svg class="helmet" viewBox="0 0 120 132" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a4252"/><stop offset=".5" stop-color="#222a38"/><stop offset="1" stop-color="#141a25"/></linearGradient>
+            <linearGradient id="plate" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a5568"/><stop offset="1" stop-color="#2a3140"/></linearGradient>
+            <filter id="eyeBlur" x="-120%" y="-120%" width="340%" height="340%"><feGaussianBlur stdDeviation="3"/></filter>
+          </defs>
+          <circle class="ring" cx="60" cy="66" r="60" fill="none" stroke="#ff2d44" stroke-width="2.5"/>
+          <path class="crest" d="M52,30 C44,18 40,8 36,2" fill="none" stroke-width="3" stroke-linecap="round"/>
+          <circle class="crest" cx="36" cy="2" r="3"/>
+          <path class="crest" d="M68,30 C76,18 80,8 84,2" fill="none" stroke-width="3" stroke-linecap="round"/>
+          <circle class="crest" cx="84" cy="2" r="3"/>
+          <path d="M60,10 C95,10 108,36 108,64 C108,93 88,118 60,128 C32,118 12,93 12,64 C12,36 25,10 60,10 Z" fill="url(#metal)" stroke="#0c0f16" stroke-width="2"/>
+          <path d="M16,60 C20,42 30,28 44,22 L40,42 C28,48 22,56 20,68 Z" fill="url(#plate)" opacity=".9"/>
+          <path d="M104,60 C100,42 90,28 76,22 L80,42 C92,48 98,56 100,68 Z" fill="url(#plate)" opacity=".9"/>
+          <polygon class="crest" points="60,12 65,34 60,44 55,34"/>
+          <path d="M34,48 C40,42 80,42 86,48 L82,88 C76,100 64,106 60,106 C56,106 44,100 38,88 Z" fill="#0f131c" stroke="#39404e" stroke-width="1.5"/>
+          <g id="visorGlow" filter="url(#eyeBlur)">
+            <polygon id="glowL" points="36,54 56,48 58,66 38,70" fill="#ff6680" opacity="0"/>
+            <polygon id="glowR" points="84,54 64,48 62,66 82,70" fill="#ff6680" opacity="0"/>
+          </g>
+          <polygon class="eye" points="36,54 56,48 58,66 38,70"/>
+          <polygon class="eye" points="84,54 64,48 62,66 82,70"/>
+          <g class="grille" opacity=".55">
+            <rect x="48" y="86" width="24" height="14" rx="3" fill="#0a0d14" stroke="#39404e"/>
+            <line x1="54" y1="87" x2="54" y2="99" stroke="#5a6678" stroke-width="1.5"/>
+            <line x1="60" y1="87" x2="60" y2="99" stroke="#5a6678" stroke-width="1.5"/>
+            <line x1="66" y1="87" x2="66" y2="99" stroke="#5a6678" stroke-width="1.5"/>
+          </g>
+        </svg>
+      </span>
+      <span id="recLabel" class="henshin-label">변 신</span>
+    </button>
+
+    <div class="console-row">
+      <div class="gauge">⏱ <span id="timer" class="timer">00:00</span></div>
+      <label class="opt"><input type="checkbox" id="tsToggle"> 타임스탬프</label>
+      <span id="meterTip" class="meter-tip"></span>
+    </div>
+  </div>
+
+  <div class="panel" id="logPanel">
+    <div class="log-head"><span class="bars"><i></i><i></i><i></i></span> LOG</div>
+    <div id="editor" class="editor" contenteditable="true" spellcheck="false"
+         data-placeholder="MISSION"></div>
+    <div id="count" class="count">0 자</div>
+  </div>
+
+  <div class="actions">
+    <button id="copyBtn" class="hbtn">📋 복사</button>
+    <button id="txtBtn" class="hbtn">⬇ TXT 저장</button>
+    <button id="clearBtn" class="hbtn danger">🗑 비우기</button>
+  </div>
+
+  <div class="panel" id="recordsPanel" style="margin-top:16px;">
+    <div class="records-head">
+      <span>RECORDS</span>
+      <button id="clearAllBtn" class="mini danger">전체 삭제</button>
+    </div>
+    <div id="historyList" class="history"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  // ===== 헬멧 5종 (안테나/뿔 강조, 동일 클래스/ID 사용) =====
+  const HELMETS = {
+    kaiju: { eyeOn:'#ffd24d', eyeDim:'#3a2e10', svg: `
+      <circle class="ring" cx="60" cy="66" r="60" fill="none" stroke="#ff2d44" stroke-width="2.5"/>
+      <polygon class="crest" points="30,32 16,2 42,24"/>
+      <polygon class="crest" points="90,32 104,2 78,24"/>
+      <polygon class="crest" points="60,8 53,0 67,0"/>
+      <path d="M60,12 C90,10 110,34 106,62 C103,90 86,116 60,128 C34,116 17,90 14,62 C10,34 30,14 60,12 Z" fill="#1c2a1e" stroke="#0a1410" stroke-width="2"/>
+      <path d="M28,48 C40,40 80,40 92,48 L88,60 C76,52 44,52 32,60 Z" fill="#16361f" opacity=".9"/>
+      <g id="visorGlow" filter="url(#eyeBlur)">
+        <polygon id="glowL" points="34,56 54,50 56,60 36,66" fill="#ffd24d" opacity="0"/>
+        <polygon id="glowR" points="86,56 66,50 64,60 84,66" fill="#ffd24d" opacity="0"/>
+      </g>
+      <polygon class="eye" points="34,56 54,50 56,60 36,66"/>
+      <polygon class="eye" points="86,56 66,50 64,60 84,66"/>
+      <path d="M40,84 C50,96 70,96 80,84 L76,98 C70,106 50,106 44,98 Z" fill="#0a1410"/>
+      <polygon class="grille" points="46,88 50,101 54,88" fill="#e8f0d8"/>
+      <polygon class="grille" points="74,88 70,101 66,88" fill="#e8f0d8"/>
+      <polygon class="grille" points="58,90 60,103 62,90" fill="#e8f0d8"/>` },
+
+    sentai: { eyeOn:'#36e0ff', eyeDim:'#103038', svg: `
+      <circle class="ring" cx="60" cy="66" r="60" fill="none" stroke="#ff2d44" stroke-width="2.5"/>
+      <polygon class="crest" points="60,2 71,32 60,24 49,32"/>
+      <path d="M60,12 C92,12 106,38 106,66 C106,95 86,120 60,128 C34,120 14,95 14,66 C14,38 28,12 60,12 Z" fill="url(#metal)" stroke="#0c0f16" stroke-width="2"/>
+      <path d="M30,40 C24,52 22,64 24,80 L32,76 C30,62 32,52 38,44 Z" fill="url(#plate)" opacity=".85"/>
+      <path d="M90,40 C96,52 98,64 96,80 L88,76 C90,62 88,52 82,44 Z" fill="url(#plate)" opacity=".85"/>
+      <path d="M30,52 C44,44 76,44 90,52 L84,74 C72,82 48,82 36,74 Z" fill="#0f131c" stroke="#39404e" stroke-width="1.5"/>
+      <g id="visorGlow" filter="url(#eyeBlur)">
+        <polygon id="glowL" points="34,54 56,50 56,68 38,70" fill="#36e0ff" opacity="0"/>
+        <polygon id="glowR" points="86,54 64,50 64,68 82,70" fill="#36e0ff" opacity="0"/>
+      </g>
+      <polygon class="eye" points="34,54 56,50 56,68 38,70"/>
+      <polygon class="eye" points="86,54 64,50 64,68 82,70"/>
+      <rect x="58" y="50" width="4" height="20" fill="url(#metal)"/>
+      <path class="grille" d="M44,92 C52,100 68,100 76,92 L72,101 C66,107 54,107 48,101 Z" fill="#0a0d14" stroke="#39404e" stroke-width="1" opacity=".7"/>` },
+
+    rider: { eyeOn:'#ff2d44', eyeDim:'#3a0e16', svg: `
+      <circle class="ring" cx="60" cy="66" r="60" fill="none" stroke="#ff2d44" stroke-width="2.5"/>
+      <path class="crest" d="M52,30 C44,18 40,8 36,2" fill="none" stroke-width="3" stroke-linecap="round"/>
+      <circle class="crest" cx="36" cy="2" r="3"/>
+      <path class="crest" d="M68,30 C76,18 80,8 84,2" fill="none" stroke-width="3" stroke-linecap="round"/>
+      <circle class="crest" cx="84" cy="2" r="3"/>
+      <path d="M60,10 C95,10 108,36 108,64 C108,93 88,118 60,128 C32,118 12,93 12,64 C12,36 25,10 60,10 Z" fill="url(#metal)" stroke="#0c0f16" stroke-width="2"/>
+      <path d="M16,60 C20,42 30,28 44,22 L40,42 C28,48 22,56 20,68 Z" fill="url(#plate)" opacity=".9"/>
+      <path d="M104,60 C100,42 90,28 76,22 L80,42 C92,48 98,56 100,68 Z" fill="url(#plate)" opacity=".9"/>
+      <polygon class="crest" points="60,12 65,34 60,44 55,34"/>
+      <path d="M34,48 C40,42 80,42 86,48 L82,88 C76,100 64,106 60,106 C56,106 44,100 38,88 Z" fill="#0f131c" stroke="#39404e" stroke-width="1.5"/>
+      <g id="visorGlow" filter="url(#eyeBlur)">
+        <polygon id="glowL" points="36,54 56,48 58,66 38,70" fill="#ff6680" opacity="0"/>
+        <polygon id="glowR" points="84,54 64,48 62,66 82,70" fill="#ff6680" opacity="0"/>
+      </g>
+      <polygon class="eye" points="36,54 56,48 58,66 38,70"/>
+      <polygon class="eye" points="84,54 64,48 62,66 82,70"/>
+      <g class="grille" opacity=".55">
+        <rect x="48" y="86" width="24" height="14" rx="3" fill="#0a0d14" stroke="#39404e"/>
+        <line x1="54" y1="87" x2="54" y2="99" stroke="#5a6678" stroke-width="1.5"/>
+        <line x1="60" y1="87" x2="60" y2="99" stroke="#5a6678" stroke-width="1.5"/>
+        <line x1="66" y1="87" x2="66" y2="99" stroke="#5a6678" stroke-width="1.5"/>
+      </g>` },
+
+    robot: { eyeOn:'#43f5a0', eyeDim:'#103a28', svg: `
+      <circle class="ring" cx="60" cy="66" r="60" fill="none" stroke="#ff2d44" stroke-width="2.5"/>
+      <polygon class="crest" points="40,32 30,6 46,24"/>
+      <polygon class="crest" points="80,32 90,6 74,24"/>
+      <rect class="crest" x="58" y="2" width="4" height="18" rx="1"/>
+      <circle class="crest" cx="60" cy="2" r="2.5"/>
+      <path d="M30,18 L90,18 L104,40 L104,84 L84,124 L36,124 L16,84 L16,40 Z" fill="url(#metal)" stroke="#0c0f16" stroke-width="2"/>
+      <path d="M18,54 L30,54 L30,76 L18,72 Z" fill="url(#plate)"/>
+      <path d="M102,54 L90,54 L90,76 L102,72 Z" fill="url(#plate)"/>
+      <rect x="30" y="50" width="60" height="20" rx="4" fill="#0f131c" stroke="#39404e" stroke-width="1.5"/>
+      <g id="visorGlow" filter="url(#eyeBlur)">
+        <polygon id="glowL" points="34,54 54,54 54,66 34,66" fill="#43f5a0" opacity="0"/>
+        <polygon id="glowR" points="86,54 66,54 66,66 86,66" fill="#43f5a0" opacity="0"/>
+      </g>
+      <polygon class="eye" points="34,54 54,54 54,66 34,66"/>
+      <polygon class="eye" points="86,54 66,54 66,66 86,66"/>
+      <rect x="58" y="52" width="4" height="16" fill="url(#metal)"/>
+      <g class="grille" opacity=".6">
+        <rect x="46" y="92" width="28" height="12" rx="2" fill="#0a0d14" stroke="#39404e"/>
+        <line x1="52" y1="93" x2="52" y2="103" stroke="#5a6678" stroke-width="1.5"/>
+        <line x1="60" y1="93" x2="60" y2="103" stroke="#5a6678" stroke-width="1.5"/>
+        <line x1="68" y1="93" x2="68" y2="103" stroke="#5a6678" stroke-width="1.5"/>
+      </g>` },
+
+    hero: { eyeOn:'#8ac6ff', eyeDim:'#1a2a3a', svg: `
+      <circle class="ring" cx="60" cy="66" r="60" fill="none" stroke="#ff2d44" stroke-width="2.5"/>
+      <path class="crest" d="M34,46 C20,38 8,32 1,34 C12,30 24,36 38,48 Z"/>
+      <path class="crest" d="M86,46 C100,38 112,32 119,34 C108,30 96,36 82,48 Z"/>
+      <path d="M60,10 C92,10 104,36 104,64 C104,94 86,120 60,128 C34,120 16,94 16,64 C16,36 28,10 60,10 Z" fill="url(#metal)" stroke="#0c0f16" stroke-width="2"/>
+      <polygon class="crest" points="60,18 63,27 72,27 65,33 67,42 60,36 53,42 55,33 48,27 57,27"/>
+      <g id="visorGlow" filter="url(#eyeBlur)">
+        <polygon id="glowL" points="32,58 52,52 54,62 34,66" fill="#8ac6ff" opacity="0"/>
+        <polygon id="glowR" points="88,58 68,52 66,62 86,66" fill="#8ac6ff" opacity="0"/>
+      </g>
+      <polygon class="eye" points="32,58 52,52 54,62 34,66"/>
+      <polygon class="eye" points="88,58 68,52 66,62 86,66"/>
+      <path class="grille" d="M48,96 C54,100 66,100 72,96" fill="none" stroke="#39404e" stroke-width="2" opacity=".6"/>` }
+  };
+
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const editor = document.getElementById('editor');
+  const recBtn = document.getElementById('recBtn');
+  const recLabel = document.getElementById('recLabel');
+  const tsToggle = document.getElementById('tsToggle');
+  const dot = document.getElementById('dot');
+  const statusText = document.getElementById('statusText');
+  const timerEl = document.getElementById('timer');
+  const countEl = document.getElementById('count');
+  const logPanel = document.getElementById('logPanel');
+  const helmetHost = document.getElementById('helmetHost');
+  const DEFS = '<defs>'
+    + '<linearGradient id="metal" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a4252"/><stop offset=".5" stop-color="#222a38"/><stop offset="1" stop-color="#141a25"/></linearGradient>'
+    + '<linearGradient id="plate" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a5568"/><stop offset="1" stop-color="#2a3140"/></linearGradient>'
+    + '<filter id="eyeBlur" x="-120%" y="-120%" width="340%" height="340%"><feGaussianBlur stdDeviation="3"/></filter>'
+    + '</defs>';
+  const meterTip = document.getElementById('meterTip');
+
+  if (!SR) { document.getElementById('unsupported').style.display = 'block'; recBtn.disabled = true; }
+
+  // 시스템 언어 자동 감지
+  function detectLang(){
+    const l = (navigator.language || 'ko-KR').toLowerCase();
+    if (l.startsWith('ko')) return 'ko-KR';
+    if (l.startsWith('en')) return 'en-US';
+    if (l.startsWith('ja')) return 'ja-JP';
+    if (l.startsWith('zh')) return 'zh-CN';
+    return navigator.language || 'ko-KR';
+  }
+  let currentLang = detectLang();
+  const HELMET_EMOJI = { kaiju:'👹', sentai:'⭐', rider:'🦗', robot:'🤖', hero:'🦸' };
+
+  let recognition = null, recording = false, interimNode = null, startTime = 0, timerInt = null;
+  let currentHelmet = 'rider';
+  let glowL = null, glowR = null, visorGlow = null;
+  let audioCtx = null, micStream = null, analyser = null, meterRAF = null;
+  let quietFrames = 0, glowSmooth = 0;
+  let mediaRecorder = null, recChunks = [], recMime = '';
+
+  // ===== 헬멧 선택 =====
+  function selectHelmet(key){
+    const h = HELMETS[key] || HELMETS.rider;
+    currentHelmet = HELMETS[key] ? key : 'rider';
+    // HTML 호스트에 완전한 <svg>를 주입 → 사파리/WebKit에서도 올바른 SVG 네임스페이스로 파싱됨
+    helmetHost.innerHTML = '<svg class="helmet" viewBox="0 0 120 132" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' + DEFS + h.svg + '</svg>';
+    recBtn.style.setProperty('--eyeOn', h.eyeOn);
+    recBtn.style.setProperty('--eyeDim', h.eyeDim);
+    glowL = document.getElementById('glowL');
+    glowR = document.getElementById('glowR');
+    visorGlow = document.getElementById('visorGlow');
+    document.querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c.dataset.key === key));
+    try { localStorage.setItem('voicerider.helmet', key); } catch(_) {}
+  }
+  document.querySelectorAll('.chip').forEach(c =>
+    c.addEventListener('click', () => selectHelmet(c.dataset.key)));
+  let saved = 'rider';
+  try { saved = localStorage.getItem('voicerider.helmet') || 'rider'; } catch(_) {}
+  try { selectHelmet(HELMETS[saved] ? saved : 'rider'); } catch(_) {}
+
+  // ===== 언어 선택 (칩) =====
+  function setLang(l){
+    currentLang = l;
+    document.querySelectorAll('.lchip').forEach(c => c.classList.toggle('active', c.dataset.lang === l));
+    try { localStorage.setItem('voicerider.lang', l); } catch(_) {}
+    // 녹음 중이면 새 언어로 즉시 재시작 (onend 핸들러가 이어받음)
+    if (recording && recognition){ recognition.lang = l; try { recognition.stop(); } catch(_) {} }
+  }
+  document.querySelectorAll('.lchip').forEach(c => c.addEventListener('click', () => setLang(c.dataset.lang)));
+  let savedLang = null; try { savedLang = localStorage.getItem('voicerider.lang'); } catch(_) {}
+  try { setLang(savedLang || currentLang); } catch(_) {}
+
+  // ===== 유틸 =====
+  function two(n){ return String(n).padStart(2,'0'); }
+  function elapsed(){ const s = Math.floor((Date.now()-startTime)/1000); return two(Math.floor(s/60))+':'+two(s%60); }
+  function clockNow(){ const d=new Date(); return two(d.getHours())+':'+two(d.getMinutes())+':'+two(d.getSeconds()); }
+  function updateCount(){ countEl.textContent = editor.innerText.replace(/\s/g,'').length + ' 자'; }
+  function clearInterim(){ if (interimNode && interimNode.parentNode) interimNode.parentNode.removeChild(interimNode); interimNode = null; }
+  function appendFinal(text){
+    text = text.trim(); if (!text) return;
+    if (tsToggle.checked) { const t = document.createElement('span'); t.className='line-time'; t.textContent='['+clockNow()+']'; editor.appendChild(t); }
+    editor.appendChild(document.createTextNode(text + '\n')); updateCount(); editor.scrollTop = editor.scrollHeight;
+  }
+  function showInterim(text){
+    clearInterim(); if (!text.trim()) return;
+    interimNode = document.createElement('span'); interimNode.className='interim'; interimNode.textContent=text;
+    editor.appendChild(interimNode); editor.scrollTop = editor.scrollHeight;
+  }
+
+  function build(){
+    const r = new SR();
+    r.lang = currentLang; r.continuous = true; r.interimResults = true;
+    r.onresult = function(e){
+      let interim = '';
+      for (let i = e.resultIndex; i < e.results.length; i++){
+        const res = e.results[i];
+        if (res.isFinal) appendFinal(res[0].transcript); else interim += res[0].transcript;
+      }
+      showInterim(interim);
+    };
+    r.onerror = function(e){ if (e.error==='not-allowed' || e.error==='service-not-allowed'){ statusText.textContent='마이크 권한 필요'; stop(); } };
+    r.onend = function(){ clearInterim(); if (recording){ try { r.start(); } catch(_) {} } };
+    return r;
+  }
+
+  function pickMime(){
+    if (!window.MediaRecorder) return '';
+    const cands = ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg'];
+    for (const m of cands){ try { if (MediaRecorder.isTypeSupported(m)) return m; } catch(_){} }
+    return '';
+  }
+  async function startMeter(){
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { autoGainControl:true, noiseSuppression:true, echoCancellation:true } });
+      if (!recording){ stream.getTracks().forEach(t => t.stop()); return; }  // 이미 정지됨
+      micStream = stream;
+      // 오디오 파일 녹음
+      recChunks = []; recMime = pickMime();
+      if (window.MediaRecorder){
+        try {
+          mediaRecorder = recMime ? new MediaRecorder(stream, {mimeType:recMime}) : new MediaRecorder(stream);
+          if (!recMime) recMime = mediaRecorder.mimeType || 'audio/webm';
+          mediaRecorder.ondataavailable = e => { if (e.data && e.data.size) recChunks.push(e.data); };
+          mediaRecorder.start();
+        } catch(_) { mediaRecorder = null; }
+      }
+      // 입력 레벨 미터
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const src = audioCtx.createMediaStreamSource(micStream);
+      analyser = audioCtx.createAnalyser(); analyser.fftSize = 1024; src.connect(analyser);
+      const data = new Uint8Array(analyser.fftSize);
+      const loop = () => {
+        analyser.getByteTimeDomainData(data);
+        let sum = 0; for (let i=0;i<data.length;i++){ const v=(data[i]-128)/128; sum+=v*v; }
+        const level = Math.min(1, Math.sqrt(sum/data.length) * 3.2);
+        glowSmooth += (level - glowSmooth) * (level > glowSmooth ? 0.5 : 0.12);
+        const g = glowSmooth;
+        if (glowL && glowR && visorGlow){
+          glowL.setAttribute('opacity', Math.min(1, g*1.3));
+          glowR.setAttribute('opacity', Math.min(1, g*1.3));
+          visorGlow.style.transform = 'scale(' + (1 + g*0.22) + ')';
+        }
+        const pct = Math.round(level*100);
+        if (recording && pct>0 && pct<12) quietFrames++; else if (pct>=12) quietFrames = 0;
+        meterTip.textContent = quietFrames > 80 ? '⚠ 입력 약함 — 마이크 ↑' : '';
+        meterRAF = requestAnimationFrame(loop);
+      };
+      loop();
+    } catch(_) {}
+  }
+  function stopVisuals(){
+    if (meterRAF) cancelAnimationFrame(meterRAF); meterRAF = null;
+    quietFrames = 0; glowSmooth = 0;
+    if (glowL && glowR && visorGlow){ glowL.setAttribute('opacity',0); glowR.setAttribute('opacity',0); visorGlow.style.transform='scale(1)'; }
+    meterTip.textContent = '';
+  }
+  function releaseAudio(){
+    if (micStream) micStream.getTracks().forEach(t => t.stop());
+    if (audioCtx) { try { audioCtx.close(); } catch(_){} }
+    micStream = audioCtx = analyser = null;
+  }
+
+  function start(){
+    if (!SR) return;
+    editor.innerHTML = ''; updateCount();   // 새 미션 시작
+    recognition = build(); recording = true;
+    try { recognition.start(); } catch(_) {}
+    recLabel.textContent = '해 제';
+    recBtn.classList.add('recording'); logPanel.classList.add('recording-on');
+    dot.classList.add('live'); statusText.textContent = '변신 중 · REC';
+    startTime = Date.now(); timerInt = setInterval(()=> timerEl.textContent = elapsed(), 250);
+    startMeter();
+  }
+  function stop(){
+    recording = false;
+    if (recognition) { try { recognition.stop(); } catch(_) {} }
+    clearInterim();
+    recLabel.textContent = '변 신';
+    recBtn.classList.remove('recording'); logPanel.classList.remove('recording-on');
+    dot.classList.remove('live'); statusText.textContent = 'STANDBY';
+    clearInterval(timerInt); stopVisuals();
+    const durSec = startTime ? Math.floor((Date.now()-startTime)/1000) : 0;
+    const text = editor.innerText;
+    if (mediaRecorder && mediaRecorder.state !== 'inactive'){
+      mediaRecorder.onstop = () => {
+        const blob = recChunks.length ? new Blob(recChunks, {type: recMime}) : null;
+        const id = addRecord(text, durSec, !!blob);
+        if (id && blob) idbPut(id, blob).then(renderHistory).catch(()=>{});
+        recChunks = []; mediaRecorder = null; releaseAudio();
+      };
+      try { mediaRecorder.stop(); } catch(_) { addRecord(text, durSec, false); releaseAudio(); }
+    } else {
+      addRecord(text, durSec, false); releaseAudio();
+    }
+  }
+
+  recBtn.addEventListener('click', ()=> recording ? stop() : start());
+  document.getElementById('copyBtn').addEventListener('click', function(){
+    navigator.clipboard.writeText(editor.innerText).then(()=>{ this.textContent='✅ 복사됨'; setTimeout(()=> this.textContent='📋 복사',1500); });
+  });
+  document.getElementById('txtBtn').addEventListener('click', function(){
+    const d = new Date();
+    const name = '녹취록_'+d.getFullYear()+two(d.getMonth()+1)+two(d.getDate())+'_'+two(d.getHours())+two(d.getMinutes())+'.txt';
+    const blob = new Blob([editor.innerText], {type:'text/plain;charset=utf-8'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); URL.revokeObjectURL(a.href);
+  });
+  document.getElementById('clearBtn').addEventListener('click', function(){
+    if (editor.innerText.trim() && !confirm('LOG를 모두 지울까요?')) return;
+    editor.innerHTML = ''; updateCount();
+  });
+  editor.addEventListener('input', updateCount);
+
+  // ===== RECORDS (녹음 이력) =====
+  const historyList = document.getElementById('historyList');
+
+  // 오디오 블롭은 IndexedDB에 저장 (용량이 커서 localStorage 불가)
+  let _db = null;
+  function idb(){ return new Promise((res, rej) => {
+    if (_db) return res(_db);
+    let rq; try { rq = indexedDB.open('voicerider', 1); } catch(e){ return rej(e); }
+    rq.onupgradeneeded = () => { try { rq.result.createObjectStore('audio'); } catch(_){} };
+    rq.onsuccess = () => { _db = rq.result; res(_db); };
+    rq.onerror = () => rej(rq.error);
+  }); }
+  function idbPut(k, b){ return idb().then(db => new Promise((res, rej) => { const tx = db.transaction('audio','readwrite'); tx.objectStore('audio').put(b, k); tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); })); }
+  function idbGet(k){ return idb().then(db => new Promise((res, rej) => { const tx = db.transaction('audio','readonly'); const rq = tx.objectStore('audio').get(k); rq.onsuccess = () => res(rq.result || null); rq.onerror = () => rej(rq.error); })); }
+  function idbDel(k){ return idb().then(db => new Promise((res) => { const tx = db.transaction('audio','readwrite'); tx.objectStore('audio').delete(k); tx.oncomplete = () => res(); tx.onerror = () => res(); })); }
+  function idbClear(){ return idb().then(db => new Promise((res) => { const tx = db.transaction('audio','readwrite'); tx.objectStore('audio').clear(); tx.oncomplete = () => res(); tx.onerror = () => res(); })); }
+  function extFromType(t){ if (!t) return 'webm'; if (t.indexOf('mp4')>=0 || t.indexOf('m4a')>=0) return 'm4a'; if (t.indexOf('ogg')>=0) return 'ogg'; return 'webm'; }
+
+  function loadHistory(){ try { return JSON.parse(localStorage.getItem('voicerider.history') || '[]'); } catch(_) { return []; } }
+  function saveHistory(arr){ try { localStorage.setItem('voicerider.history', JSON.stringify(arr)); } catch(_) {} }
+  function fmtDur(s){ return two(Math.floor(s/60)) + ':' + two(s%60); }
+  function escapeHtml(s){ return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function downloadText(name, text){
+    const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); URL.revokeObjectURL(a.href);
+  }
+  function addRecord(text, durSec, hasAudio){
+    text = (text || '').trim(); if (!text && !hasAudio) return null;
+    const d = new Date();
+    const date = d.getFullYear()+'.'+two(d.getMonth()+1)+'.'+two(d.getDate())+' '+two(d.getHours())+':'+two(d.getMinutes());
+    const id = String(Date.now());
+    const arr = loadHistory();
+    arr.unshift({ id, date, dur:durSec, helmet:currentHelmet, lang:currentLang, text, chars:text.replace(/\s/g,'').length, audio:!!hasAudio, audioType: hasAudio ? recMime : '' });
+    if (arr.length > 100) arr.length = 100;
+    saveHistory(arr); renderHistory();
+    return id;
+  }
+  function renderHistory(){
+    const arr = loadHistory();
+    if (!arr.length){ historyList.innerHTML = '<div class="empty">아직 기록이 없습니다. 변신하여 첫 미션을 시작하세요.</div>'; return; }
+    historyList.innerHTML = arr.map(r => {
+      const prev = r.text ? r.text.replace(/\n/g,' ') : '(오디오 전용 · 텍스트 없음)';
+      const audioBtns = r.audio
+        ? '<button class="mini" data-act="play" title="듣기">🔊</button>'
+        + '<button class="mini" data-act="adl" title="오디오 저장">💾</button>' : '';
+      return '<div class="hrow" data-id="'+r.id+'">'
+        + '<div class="hinfo">'
+        +   '<div class="htitle">'+(HELMET_EMOJI[r.helmet]||'🎙')+' '+r.date+(r.audio?' · 🎧':'')+'</div>'
+        +   '<div class="hmeta">⏱ '+fmtDur(r.dur)+' · '+r.chars+'자 · '+r.lang+'</div>'
+        +   '<div class="hprev">'+escapeHtml(prev.slice(0,80))+(prev.length>80?'…':'')+'</div>'
+        +   '<div class="haudio"></div>'
+        + '</div>'
+        + '<div class="hbtns">'
+        +   '<button class="mini" data-act="dl" title="TXT 다운로드">⬇</button>'
+        +   '<button class="mini" data-act="load" title="텍스트 불러오기">▶</button>'
+        +   audioBtns
+        +   '<button class="mini danger" data-act="del" title="삭제">🗑</button>'
+        + '</div></div>';
+    }).join('');
+  }
+  historyList.addEventListener('click', function(e){
+    const btn = e.target.closest('button'); const row = e.target.closest('.hrow');
+    if (!btn || !row) return;
+    const arr = loadHistory(); const rec = arr.find(r => r.id === row.dataset.id); if (!rec) return;
+    const act = btn.dataset.act;
+    if (act === 'dl') downloadText('녹취록_'+rec.date.replace(/[.: ]/g,'')+'.txt', rec.text || '');
+    else if (act === 'load') { editor.innerText = rec.text; updateCount(); editor.scrollIntoView({behavior:'smooth', block:'center'}); }
+    else if (act === 'play') {
+      const slot = row.querySelector('.haudio');
+      if (slot.firstChild) { slot.innerHTML = ''; return; }   // 토글 닫기
+      idbGet(rec.id).then(blob => {
+        if (!blob) { slot.innerHTML = '<div class="empty" style="padding:8px">오디오를 찾을 수 없습니다.</div>'; return; }
+        const au = document.createElement('audio');
+        au.controls = true; au.autoplay = true; au.src = URL.createObjectURL(blob);
+        au.style.width = '100%'; au.style.marginTop = '8px';
+        slot.appendChild(au);
+      }).catch(()=>{});
+    }
+    else if (act === 'adl') {
+      idbGet(rec.id).then(blob => {
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = '녹취록_'+rec.date.replace(/[.: ]/g,'')+'.'+extFromType(rec.audioType);
+        a.click(); URL.revokeObjectURL(url);
+      }).catch(()=>{});
+    }
+    else if (act === 'del') { idbDel(rec.id).catch(()=>{}); saveHistory(arr.filter(r => r.id !== rec.id)); renderHistory(); }
+  });
+  document.getElementById('clearAllBtn').addEventListener('click', function(){
+    if (!loadHistory().length) return;
+    if (confirm('모든 RECORDS를 삭제할까요? (오디오 포함)')) { idbClear().catch(()=>{}); saveHistory([]); renderHistory(); }
+  });
+  try { renderHistory(); } catch(_) {}
+})();
+</script>
+</body>
+</html>
