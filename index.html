@@ -433,6 +433,7 @@
   let audioCtx = null, micStream = null, analyser = null, meterRAF = null;
   let quietFrames = 0, glowSmooth = 0;
   let mediaRecorder = null, recChunks = [], recMime = '';
+  let wakeLock = null;
 
   // ===== 헬멧 선택 =====
   function selectHelmet(key){
@@ -556,6 +557,12 @@
     micStream = audioCtx = analyser = null;
   }
 
+  // 녹음 중 화면이 자동으로 꺼지지 않도록 (iOS 16.4+/안드로이드 크롬)
+  async function acquireWakeLock(){
+    try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch(_) {}
+  }
+  function releaseWakeLock(){ try { if (wakeLock) { wakeLock.release(); wakeLock = null; } } catch(_) {} }
+
   function start(){
     if (!SR) return;
     editor.innerHTML = ''; updateCount();   // 새 미션 시작
@@ -566,9 +573,11 @@
     dot.classList.add('live'); statusText.textContent = '변신 중 · REC';
     startTime = Date.now(); timerInt = setInterval(()=> timerEl.textContent = elapsed(), 250);
     startMeter();
+    acquireWakeLock();
   }
   function stop(){
     recording = false;
+    releaseWakeLock();
     if (recognition) { try { recognition.stop(); } catch(_) {} }
     clearInterim();
     recLabel.textContent = '변 신';
@@ -605,6 +614,14 @@
     editor.innerHTML = ''; updateCount();
   });
   editor.addEventListener('input', updateCount);
+
+  // 다른 앱 갔다 돌아오면: 화면잠금 방지 재획득 + 끊긴 인식 재시작
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && recording) {
+      acquireWakeLock();
+      if (recognition) { try { recognition.start(); } catch(_) {} }
+    }
+  });
 
   // ===== RECORDS (녹음 이력) =====
   const historyList = document.getElementById('historyList');
